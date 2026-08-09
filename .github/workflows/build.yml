@@ -1,0 +1,33 @@
+name: build
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  windows-exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --release
+      - run: cargo build --release --bin solve_cli
+      - uses: actions/upload-artifact@v4
+        with:
+          name: solitaire-solver-windows
+          path: target/release/solve_cli.exe
+
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - run: wasm-pack build --target web --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: solitaire-solver-wasm
+          path: pkg/
