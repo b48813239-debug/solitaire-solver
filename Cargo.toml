@@ -1,0 +1,23 @@
+[package]
+name = "solitaire_solver"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "solitaire_solver"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+console_error_panic_hook = "0.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+panic = "abort"
+codegen-units = 1
+
+[profile.dev]
+opt-level = 1
