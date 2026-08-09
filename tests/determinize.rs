@@ -16,8 +16,39 @@ fn near_solved_known_state() -> KnownState {
         column_facedown_count,
         foundations,
         waste_known: vec![],
-        undrawn_count: 2,
+        stock_known: vec![],
+        undrawn_unknown_count: 2,
         unknown_pool,
+    }
+}
+
+#[test]
+fn stock_known_lands_intact_and_unshuffled() {
+    // Position où AUCUNE colonne n'a de carte cachée (unknown_pool vide), et où le talon restant
+    // est entièrement connu (stock_known) — le cas exact de isStockFullyKnown côté app. Si
+    // stock_known était par erreur mélangé avec le réservoir aléatoire, ce test échouerait dès la
+    // première graine (ou de façon incohérente d'une graine à l'autre, puisque rien ne serait
+    // fixe).
+    let mut column_visible: [Vec<Card>; 7] = std::array::from_fn(|_| Vec::new());
+    column_visible[0] = vec![make_card(2, 10)];
+    let column_facedown_count = [0u8; 7];
+    let foundations = [0u8; 4];
+    let stock_known = vec![make_card(0, 4), make_card(1, 9), make_card(3, 0)];
+
+    let known = KnownState {
+        column_visible,
+        column_facedown_count,
+        foundations,
+        waste_known: vec![],
+        stock_known: stock_known.clone(),
+        undrawn_unknown_count: 0,
+        unknown_pool: vec![],
+    };
+
+    for seed in 0..10u64 {
+        let world = sample_world(&known, seed * 7 + 3);
+        let remaining: Vec<Card> = (world.stock_pointer..world.stock_len).map(|i| world.stock[i as usize]).collect();
+        assert_eq!(remaining, stock_known, "seed={seed} : stock_known doit atterrir intact et dans l'ordre, jamais réordonné");
     }
 }
 
