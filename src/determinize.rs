@@ -15,13 +15,22 @@ pub struct KnownState {
     pub column_facedown_count: [u8; NUM_COLUMNS],
     pub foundations: [u8; 4],
     pub waste_known: Vec<Card>,
-    pub undrawn_count: u8,
+    // Cartes du talon pas encore tirées LORS DE CE PASSAGE, mais déjà vues lors d'un passage
+    // précédent (recyclage) — leur identité et leur ordre de tirage sont donc parfaitement
+    // déterminés, PAS une inconnue à échantillonner. Distinct de `unknown_pool` précisément pour
+    // ça : les mélanger aurait fait tirer un talon aléatoire fictif là où le vrai talon restant
+    // est déjà entièrement connu (cas courant dès qu'un passage complet a eu lieu).
+    pub stock_known: Vec<Card>,
+    // Cartes du talon jamais vues (uniquement possible avant la fin du tout premier passage) —
+    // celles-ci, et seulement celles-ci, sont piochées dans `unknown_pool` au même titre que les
+    // cartes de colonnes encore cachées.
+    pub undrawn_unknown_count: u8,
     pub unknown_pool: Vec<Card>,
 }
 
 impl KnownState {
     fn total_unknown_slots(&self) -> usize {
-        self.column_facedown_count.iter().map(|&c| c as usize).sum::<usize>() + self.undrawn_count as usize
+        self.column_facedown_count.iter().map(|&c| c as usize).sum::<usize>() + self.undrawn_unknown_count as usize
     }
 }
 
@@ -46,9 +55,15 @@ pub fn sample_world(known: &KnownState, seed: u64) -> State {
         column_cards[col].extend_from_slice(&known.column_visible[col]);
     }
 
+    // Ordre du talon reconstitué : d'abord ce qui a déjà été tiré CE passage (waste_known, sera
+    // remis dans le talon puis re-tiré juste en dessous pour atterrir exactement dans le talon
+    // où il était), puis ce qui est encore à tirer mais déjà connu (stock_known, dans son ordre
+    // réel), puis enfin les vraies inconnues nouvellement échantillonnées. Cet ordre précis
+    // importe : c'est lui qui détermine dans quel ordre `state.draw()` les ressort.
     let mut stock = known.waste_known.clone();
-    stock.extend_from_slice(&pool[idx..idx + known.undrawn_count as usize]);
-    idx += known.undrawn_count as usize;
+    stock.extend_from_slice(&known.stock_known);
+    stock.extend_from_slice(&pool[idx..idx + known.undrawn_unknown_count as usize]);
+    idx += known.undrawn_unknown_count as usize;
     debug_assert_eq!(idx, pool.len());
 
     let mut state = State::deal(&column_cards, &known.column_facedown_count, &stock);
