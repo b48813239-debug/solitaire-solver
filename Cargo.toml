@@ -20,9 +20,3 @@ codegen-units = 1
 
 [profile.dev]
 opt-level = 1
-lto = true
-panic = "abort"
-codegen-units = 1
-
-[profile.dev]
-opt-level = 1
